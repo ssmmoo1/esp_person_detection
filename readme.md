@@ -10,6 +10,8 @@ Open the SDK config and set
 
 - WiFi SSID and WiFi Password 
 
+- SPI RAM Config - SPI RAM Access method set to Make RAM allocatable using malloc() 
+
 Save flash and run 
 
 Should see a person score output based on the camera in the terminal about twice per second and an attempt to connect to wifi. 
