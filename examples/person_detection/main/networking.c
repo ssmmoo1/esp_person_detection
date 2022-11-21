@@ -24,14 +24,16 @@
 #include <lwip/netdb.h>
 
 
-#define HOST_IP_ADDR "192.168.1.165"
+#define HOST_IP_ADDR "192.168.0.246"
 #define PORT 3333
 
 static const char *TAG = "networking";
-static const char *payload = "Message from ESP32 ";
+static const char *payload = "Found Person ";
 
-static void network_client(void *pvParameters)
+static void network_task_loop(QueueHandle_t input_q)
 {
+    int8_t * input_item;
+
     char rx_buffer[128];
     char addr_str[128];
     int addr_family;
@@ -62,6 +64,9 @@ static void network_client(void *pvParameters)
         ESP_LOGI(TAG, "Successfully connected");
 
         while (1) {
+
+            xQueueReceive(input_q, input_item, portMAX_DELAY);
+
             int err = send(sock, payload, strlen(payload), 0);
             if (err < 0) {
                 ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);

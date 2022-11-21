@@ -57,7 +57,7 @@ static uint8_t *tensor_arena;//[kTensorArenaSize]; // Maybe we should move this 
 }  // namespace
 
 // The name of this function is important for Arduino compatibility.
-void setup() {
+void pdetect_task_setup() {
   // Set up logging. Google style is to avoid globals or statics because of
   // lifetime uncertainty, but since this has a trivial destructor it's okay.
   // NOLINTNEXTLINE(runtime-global-variables)
@@ -126,7 +126,7 @@ void setup() {
 
 #ifndef CLI_ONLY_INFERENCE
 // The name of this function is important for Arduino compatibility.
-void loop() {
+void pdetect_task_loop() {
   // Get image from provider.
   if (kTfLiteOk != GetImage(error_reporter, kNumCols, kNumRows, kNumChannels,
                             input->data.int8)) {
