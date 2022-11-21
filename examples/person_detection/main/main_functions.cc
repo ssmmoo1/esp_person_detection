@@ -151,6 +151,7 @@ void loop() {
 
   // Respond to detection
   RespondToDetection(error_reporter, person_score_f, no_person_score_f);
+  //printf("person_score_f: %f no_person_score_f: %f\n", person_score_f, no_person_score_f);
   vTaskDelay(1); // to avoid watchdog trigger
 }
 #endif

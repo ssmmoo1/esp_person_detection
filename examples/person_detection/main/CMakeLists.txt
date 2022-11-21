@@ -15,5 +15,5 @@ idf_component_register(
         "esp_cli.c"
         "networking.c"
 
-    PRIV_REQUIRES console tflite-lib esp32-camera screen static_images spi_flash fb_gfx protocol_examples_common nvs_flash
+    PRIV_REQUIRES console tflite-lib esp32-camera screen static_images spi_flash fb_gfx protocol_examples_common nvs_flash fatfs sdmmc driver
     INCLUDE_DIRS ".")
