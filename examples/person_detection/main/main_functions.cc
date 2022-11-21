@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
@@ -113,25 +114,22 @@ void pdetect_task_setup() {
 
   // Get information about the memory area to use for the model's input.
   input = interpreter->input(0);
-
-#ifndef CLI_ONLY_INFERENCE
-  // Initialize Camera
-  TfLiteStatus init_status = InitCamera(error_reporter);
-  if (init_status != kTfLiteOk) {
-    TF_LITE_REPORT_ERROR(error_reporter, "InitCamera failed\n");
-    return;
-  }
-#endif
 }
 
 #ifndef CLI_ONLY_INFERENCE
 // The name of this function is important for Arduino compatibility.
-void pdetect_task_loop() {
-  // Get image from provider.
-  if (kTfLiteOk != GetImage(error_reporter, kNumCols, kNumRows, kNumChannels,
-                            input->data.int8)) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Image capture failed.");
-  }
+void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
+
+  int8_t* frame_buf;
+
+  //Get image from input q
+
+  ESP_LOGE("Person Detection: ", "Waiting for input image\n");
+  xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
+  ESP_LOGE("Person Detection: ", "Received an input image\n");
+
+  memcpy(input->data.int8, frame_buf, 96*96);
+  
 
   // Run the model on this input and make sure it succeeds.
   if (kTfLiteOk != interpreter->Invoke()) {
@@ -151,6 +149,12 @@ void pdetect_task_loop() {
 
   // Respond to detection
   RespondToDetection(error_reporter, person_score_f, no_person_score_f);
+
+  if(person_score_f > no_person_score_f)
+  {
+    xQueueSend(output_q, (void*) &frame_buf, portMAX_DELAY);
+  }
+
   vTaskDelay(1); // to avoid watchdog trigger
 }
 #endif

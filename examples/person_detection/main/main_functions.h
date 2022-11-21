@@ -21,6 +21,9 @@ limitations under the License.
 extern "C" {
 #endif
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 // Initializes all data needed for the example. The name is important, and needs
 // to be setup() for Arduino compatibility.
 void pdetect_task_setup();
@@ -28,7 +31,7 @@ void pdetect_task_setup();
 // Runs one iteration of data gathering and inference. This should be called
 // repeatedly from the application code. The name needs to be loop() for Arduino
 // compatibility.
-void pdetect_task_loop();
+void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q);
 
 #ifdef __cplusplus
 }

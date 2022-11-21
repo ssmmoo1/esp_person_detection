@@ -34,18 +34,6 @@ static const char* TAG = "app_camera";
 
 static uint16_t *display_buf; // buffer to hold data to be sent to display
 
-// Get the camera module ready
-TfLiteStatus InitCamera(tflite::ErrorReporter* error_reporter) {
-
-  int ret = app_camera_init();
-  if (ret != 0) {
-    TF_LITE_REPORT_ERROR(error_reporter, "Camera init failed\n");
-    return kTfLiteError;
-  }
-  TF_LITE_REPORT_ERROR(error_reporter, "Camera Initialized\n");
-  return kTfLiteOk;
-}
-
 void *image_provider_get_display_buf()
 {
   return (void *) display_buf;

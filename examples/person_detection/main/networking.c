@@ -32,7 +32,7 @@ static const char *payload = "Found Person ";
 
 static void network_task_loop(QueueHandle_t input_q)
 {
-    int8_t * input_item;
+    int8_t* frame_buf;
 
     char rx_buffer[128];
     char addr_str[128];
@@ -65,7 +65,8 @@ static void network_task_loop(QueueHandle_t input_q)
 
         while (1) {
 
-            xQueueReceive(input_q, input_item, portMAX_DELAY);
+            xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
+            free(frame_buf);
 
             int err = send(sock, payload, strlen(payload), 0);
             if (err < 0) {
