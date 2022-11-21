@@ -18,6 +18,10 @@ limitations under the License.
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "networking.c"
+#include "nvs_flash.h"
+#include "esp_netif.h"
+#include "protocol_examples_common.h"
 
 #include "esp_main.h"
 
@@ -39,6 +43,12 @@ void tf_main(void) {
 }
 
 extern "C" void app_main() {
+  ESP_ERROR_CHECK(nvs_flash_init());
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ESP_ERROR_CHECK(example_connect());
+
+  xTaskCreate(network_client, "tcp_client", 4096, NULL, 5, NULL);
   xTaskCreate((TaskFunction_t)&tf_main, "tf_main", 4 * 1024, NULL, 8, NULL);
   vTaskDelete(NULL);
 }
