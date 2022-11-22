@@ -52,11 +52,12 @@ int app_camera_init() {
   config.pin_sscb_scl = CAMERA_PIN_SIOC;
   config.pin_pwdn = CAMERA_PIN_PWDN;
   config.pin_reset = CAMERA_PIN_RESET;
-  config.xclk_freq_hz = XCLK_FREQ_HZ;
-  config.pixel_format = CAMERA_PIXEL_FORMAT;
-  config.frame_size = CAMERA_FRAME_SIZE;
+  config.xclk_freq_hz = 20000000;
+  config.pixel_format = PIXFORMAT_RGB565;
+  config.frame_size = FRAMESIZE_QVGA;
   config.jpeg_quality = 10;
-  config.fb_count = 2;
+  config.fb_count = 1;
+  config.grab_mode      = CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
 
   // camera init
