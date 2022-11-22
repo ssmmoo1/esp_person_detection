@@ -25,6 +25,7 @@ limitations under the License.
 #include "protocol_examples_common.h"
 #include "app_camera_esp.h"
 #include "esp_camera.h"
+#include "image_processing.h"
 
 #include "esp_main.h"
 
@@ -88,7 +89,6 @@ void camera_task(void* args)
 
 }
 
-/*
 //Downscale images to 96x96
 //Reads 2 token from input queue: pointer to original image and grayscale image 
 //Writes 2 token to output queue: pointer to original image and pointer to downscaled image 
@@ -102,6 +102,7 @@ void downscale_task(void* args)
 }
 
 //Converts image to grayscale 
+/* Outputs: 2 tokens to downscale queue: original and grayscal image */
 void grayscale_task(void* args)
 {
   grayscale_task_setup();
@@ -111,7 +112,7 @@ void grayscale_task(void* args)
   }
 
 }
-*/
+
 
 //Tensorflow person detection task 
 //Reads 2 tokens from input queue,  pointer to original image and pointer to 96x96 grayscale image
@@ -119,6 +120,9 @@ void grayscale_task(void* args)
 //Reads in 96x96 grayscale images and puts full resolution color image pointer into 
 void pdetect_task(void* args) {
   pdetect_task_setup();
+
+  //TODO: Free downscale buffer pointer
+  //TODO: Return camera frame back to camera 
   while (true) {
     pdetect_task_loop(pdetect_q, network_q);
   }
@@ -142,15 +146,15 @@ extern "C" void app_main() {
 
   //Queues will hold pointers to frame buffers that are stored in global memory/heap/psram 
   //frame bufferes will be freed by the last process that uses it. 
-  //grayscale_q = xQueueCreate(3, sizeof(uint8_t*));
-  //downscale_q = xQueueCreate(6, sizeof(uint8_t*));
+  grayscale_q = xQueueCreate(3, sizeof(uint8_t*));
+  downscale_q = xQueueCreate(6, sizeof(uint8_t*));
   pdetect_q = xQueueCreate(1, sizeof(uint8_t*));
   network_q = xQueueCreate(1, sizeof(uint8_t*));
 
   //Creat all tasks
   xTaskCreate(camera_task, "camera_task", 3*1024, NULL, 5, NULL);
-  //xTaskcreate(grayscale_task, "grayscale_task", 1024, NULL, 5, NULL);
-  //xTaskCreate(downscale_task, "downscale_task", 1024, NULL, 5, NULL);
+  xTaskCreate(grayscale_task, "grayscale_task", 1024, NULL, 5, NULL);
+  xTaskCreate(downscale_task, "downscale_task", 1024, NULL, 5, NULL);
   xTaskCreate(pdetect_task, "pdetect_task", 3 * 1024, NULL, 5, NULL);
   xTaskCreate(network_task, "network_task", 3* 1024, NULL, 5, NULL);
   vTaskDelete(NULL);
