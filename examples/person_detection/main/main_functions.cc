@@ -27,6 +27,7 @@ limitations under the License.
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "esp_camera.h"
 
 #include <esp_heap_caps.h>
 #include <esp_timer.h>
@@ -119,18 +120,18 @@ void pdetect_task_setup() {
 #ifndef CLI_ONLY_INFERENCE
 // The name of this function is important for Arduino compatibility.
 void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
-
+  camera_fb_t* fb = NULL;
   int8_t* frame_buf;
 
-  //Get image from input q
-
+  /* Get full image from queue */
+  xQueueReceive(input_q, fb, portMAX_DELAY);
+  /* Get downscaled gray image from queue */
   ESP_LOGE("Person Detection: ", "Waiting for input image\n");
   xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
-  ESP_LOGE("Person Detection: ", "Received an input image\n");
 
+  ESP_LOGE("Person Detection: ", "Received an input image\n");
   memcpy(input->data.int8, frame_buf, 96*96);
   
-
   // Run the model on this input and make sure it succeeds.
   if (kTfLiteOk != interpreter->Invoke()) {
     TF_LITE_REPORT_ERROR(error_reporter, "Invoke failed.");
@@ -149,12 +150,17 @@ void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
 
   // Respond to detection
   RespondToDetection(error_reporter, person_score_f, no_person_score_f);
+  
+  /* Free downscale buffer */
+  free(frame_buf);
 
-  if(person_score_f > no_person_score_f)
-  {
-    xQueueSend(output_q, (void*) &frame_buf, portMAX_DELAY);
+  /* Send to network queue if needed */
+  if(person_score_f > no_person_score_f) {
+    xQueueSend(output_q, (void*) fb, portMAX_DELAY);
+  } else {
+    /* Return camera frame */
+    esp_camera_fb_return(fb);
   }
-
   vTaskDelay(1); // to avoid watchdog trigger
 }
 #endif

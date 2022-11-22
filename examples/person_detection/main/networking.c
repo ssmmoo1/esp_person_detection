@@ -17,6 +17,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "protocol_examples_common.h"
+#include "esp_camera.h"
 
 #include "lwip/err.h"
 #include "lwip/sockets.h"
@@ -35,7 +36,7 @@ static const int image_size = 96 * 96;
 static void network_task_loop(QueueHandle_t input_q)
 {
     int8_t* frame_buf;
-
+    camera_fb_t* fb;
     char rx_buffer[128];
     char addr_str[128];
     int addr_family;
@@ -68,8 +69,8 @@ static void network_task_loop(QueueHandle_t input_q)
         while (1) 
         {
 
-            xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
-            
+            xQueueReceive(input_q, &fb, portMAX_DELAY);
+            frame_buf = (int8_t*) fb->buf;
             /*
             //Send image_header
             err = send(sock, header, strlen(header), 0);
@@ -114,7 +115,8 @@ static void network_task_loop(QueueHandle_t input_q)
                 ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TAG, "%s", rx_buffer);
             }
-
+            /* Return the frame buffer */
+            esp_camera_fb_return(fb);
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
 

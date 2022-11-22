@@ -60,30 +60,34 @@ void camera_task(void* args)
     {
       //Get image from camera
       camera_fb_t* fb = esp_camera_fb_get();
-      if(!fb)
-      {
-        ESP_LOGE("Camera Task: ", "Camera capture failed \n");
+      while(fb == NULL) {
+        fb = esp_camera_fb_get();
       }
-      else
-      {
-        ESP_LOGE("Camera Task: ", "Camera captured a frame\n");
-      }
+      ESP_LOGE("Camera Task: ", "Camera captured a frame\n");
+      // if(!fb)
+      // {
+      //   ESP_LOGE("Camera Task: ", "Camera capture failed \n");
+      // }
+      // else
+      // {
+      //   ESP_LOGE("Camera Task: ", "Camera captured a frame\n");
+      // }
 
-      //Setup space for quantized image 
-      int8_t* quant_image = (int8_t*) malloc(sizeof(int8_t) * IM_H * IM_W);
-      if(quant_image == 0)
-      {
-        ESP_LOGE("Camera Task: ", "Quant image malloc failed");
-      }
-      for(int i = 0; i < (IM_H * IM_W); i++)
-      {
-        quant_image[i] = ((uint8_t *) fb->buf)[i] ^ 0x80;
-      }
+      // //Setup space for quantized image 
+      // int8_t* quant_image = (int8_t*) malloc(sizeof(int8_t) * IM_H * IM_W);
+      // if(quant_image == 0)
+      // {
+      //   ESP_LOGE("Camera Task: ", "Quant image malloc failed");
+      // }
+      // for(int i = 0; i < (IM_H * IM_W); i++)
+      // {
+      //   quant_image[i] = ((uint8_t *) fb->buf)[i] ^ 0x80;
+      // }
 
-      ESP_LOGE("Camera Task: ", "Converted frame buffer to quantized version\n");
-      esp_camera_fb_return(fb);
+      // ESP_LOGE("Camera Task: ", "Converted frame buffer to quantized version\n");
+      // esp_camera_fb_return(fb);
       ESP_LOGE("Camera Task: ", "Sending image to person detection");
-      xQueueSend(pdetect_q, (void*) &quant_image, portMAX_DELAY);
+      xQueueSend(grayscale_q, (void*) fb, portMAX_DELAY);
       
     }
 
