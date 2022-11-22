@@ -28,7 +28,9 @@
 #define PORT 3333
 
 static const char *TAG = "networking";
-static const char *payload = "Found Person ";
+static const char *header = "IMAGE_HEADER";
+static const int image_size = 96 * 96;
+
 
 static void network_task_loop(QueueHandle_t input_q)
 {
@@ -63,16 +65,42 @@ static void network_task_loop(QueueHandle_t input_q)
         }
         ESP_LOGI(TAG, "Successfully connected");
 
-        while (1) {
+        while (1) 
+        {
 
             xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
-            free(frame_buf);
-
-            int err = send(sock, payload, strlen(payload), 0);
-            if (err < 0) {
-                ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-                break;
+            
+            /*
+            //Send image_header
+            err = send(sock, header, strlen(header), 0);
+            if(err < 0)
+            {
+                ESP_LOGE(TAG, "Error sending image header");
             }
+            err = send(sock, (void *) (&image_size), sizeof(int), 0);
+            if(err < 0)
+            {
+                ESP_LOGE(TAG, "Error sending image size");
+            }
+            */
+
+           int bytes_per_send = 512;
+           int i;
+           for(i = 0; i < image_size; i+=bytes_per_send)
+           {
+            err = send(sock, frame_buf+i, bytes_per_send, 0);
+            if(err < 0)
+            {
+                ESP_LOGE(TAG, "Error sending image buffer");
+            }
+           }
+           err = send(sock, frame_buf+i-bytes_per_send, image_size - i, 0);
+           if(err < 0)
+           {
+                ESP_LOGE(TAG, "Error sending image buffer");
+           }
+
+            free(frame_buf);
 
             int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
             // Error occurred during receiving
