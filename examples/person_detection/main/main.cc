@@ -33,14 +33,11 @@ limitations under the License.
 #include "esp_cli.h"
 #endif
 
-//setup KPN queues for inputs to named process 
-static QueueHandle_t grayscale_q; //frame buffer pointer x2
-static QueueHandle_t downscale_q; //frame buffer pointer x1
+//setup KPN queues for inputs to processes
+static QueueHandle_t grayscale_q; //frame buffer pointer x1
+static QueueHandle_t downscale_q; //frame buffer pointer x2
 static QueueHandle_t pdetect_q; //frame buffer pointer x2
 static QueueHandle_t network_q; //frame buffer pointer x1
-
-#define IM_H 96
-#define IM_W 96
 
 
 //Take images with the camera
@@ -59,37 +56,42 @@ void camera_task(void* args)
     while(true)
     {
       //Get image from camera
-      camera_fb_t* fb = esp_camera_fb_get();
+      camera_fb_t* fb = NULL;
       while(fb == NULL) {
         fb = esp_camera_fb_get();
       }
-      ESP_LOGE("Camera Task: ", "Camera captured a frame\n");
-      // if(!fb)
-      // {
-      //   ESP_LOGE("Camera Task: ", "Camera capture failed \n");
-      // }
-      // else
-      // {
-      //   ESP_LOGE("Camera Task: ", "Camera captured a frame\n");
-      // }
+      ESP_LOGI("Camera Task: ", "Camera captured a frame\n");
 
-      // //Setup space for quantized image 
-      // int8_t* quant_image = (int8_t*) malloc(sizeof(int8_t) * IM_H * IM_W);
-      // if(quant_image == 0)
-      // {
-      //   ESP_LOGE("Camera Task: ", "Quant image malloc failed");
-      // }
-      // for(int i = 0; i < (IM_H * IM_W); i++)
-      // {
-      //   quant_image[i] = ((uint8_t *) fb->buf)[i] ^ 0x80;
-      // }
+      uint8_t* frame_buf = NULL;
+      while(frame_buf == NULL)
+      {
+        frame_buf = (uint8_t *) malloc(320 * 240 * 2);
+      }
+      ESP_LOGI("Camera Task: ", "Copied image to new buffer\n");
 
-      // ESP_LOGE("Camera Task: ", "Converted frame buffer to quantized version\n");
-      // esp_camera_fb_return(fb);
-      ESP_LOGE("Camera Task: ", "Sending image to person detection");
-      xQueueSend(grayscale_q, (void*) fb, portMAX_DELAY);
+      memcpy(frame_buf, fb->buf, 320 * 240 * 2);
+      esp_camera_fb_return(fb);
+
+      ESP_LOGI("Camera Task: ", "Returned camera fb\n");
+    
+      ESP_LOGI("Camera Task: ", "Sending image to person detection");
+      xQueueSend(grayscale_q, &frame_buf, portMAX_DELAY);
+      ESP_LOGI("Camera Task: ", "Send image to person detection");
+      vTaskDelay(5000 / portTICK_PERIOD_MS);
       
     }
+
+}
+
+//Converts image to grayscale 
+/* Outputs: 2 tokens to downscale queue: original and grayscal image */
+void grayscale_task(void* args)
+{
+  grayscale_task_setup();
+  while(true)
+  {
+    grayscale_task_loop(grayscale_q, downscale_q);
+  }
 
 }
 
@@ -101,20 +103,8 @@ void downscale_task(void* args)
     downscale_task_setup();
     while(true)
     {
-      downscale_task_loop(downscale_q, grayscale_q);
+      downscale_task_loop(downscale_q, pdetect_q);
     }
-}
-
-//Converts image to grayscale 
-/* Outputs: 2 tokens to downscale queue: original and grayscal image */
-void grayscale_task(void* args)
-{
-  grayscale_task_setup();
-  while(true)
-  {
-    grayscale_task_loop(grayscale_q, pdetect_q);
-  }
-
 }
 
 
@@ -150,16 +140,16 @@ extern "C" void app_main() {
 
   //Queues will hold pointers to frame buffers that are stored in global memory/heap/psram 
   //frame bufferes will be freed by the last process that uses it. 
-  grayscale_q = xQueueCreate(3, sizeof(uint8_t*));
-  downscale_q = xQueueCreate(6, sizeof(uint8_t*));
-  pdetect_q = xQueueCreate(1, sizeof(uint8_t*));
+  grayscale_q = xQueueCreate(1, sizeof(uint8_t*));
+  downscale_q = xQueueCreate(2, sizeof(uint8_t*));
+  pdetect_q = xQueueCreate(2, sizeof(uint8_t*));
   network_q = xQueueCreate(1, sizeof(uint8_t*));
 
   //Creat all tasks
-  xTaskCreate(camera_task, "camera_task", 3*1024, NULL, 5, NULL);
-  xTaskCreate(grayscale_task, "grayscale_task", 1024, NULL, 5, NULL);
-  xTaskCreate(downscale_task, "downscale_task", 1024, NULL, 5, NULL);
+  xTaskCreate(camera_task, "camera_task", 4*1024, NULL, 5, NULL);
+  xTaskCreate(grayscale_task, "grayscale_task", 3* 1024, NULL, 5, NULL);
+  xTaskCreate(downscale_task, "downscale_task", 3* 1024, NULL, 5, NULL);
   xTaskCreate(pdetect_task, "pdetect_task", 3 * 1024, NULL, 5, NULL);
-  xTaskCreate(network_task, "network_task", 3* 1024, NULL, 5, NULL);
+  xTaskCreate(network_task, "network_task", 3* 1024, NULL, 6, NULL);
   vTaskDelete(NULL);
 }

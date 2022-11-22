@@ -14,7 +14,8 @@
 #define IMAGE_HEIGHT 240
 
 
-static const char *TAG = "image_processing";
+static const char *TAG1 = "downscaling";
+static const char *TAG2 = "grayscaling";
 
 /* Set up gray scale method*/
 void grayscale_task_setup() {
@@ -29,15 +30,15 @@ void downscale_task_setup() {
 /* Main method for downscaling */
 void downscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     /* Read camera_fb */
-    camera_fb_t* fb= NULL;
-    xQueueReceive(input_q, fb, portMAX_DELAY);
+    uint8_t* fb = NULL;
+    xQueueReceive(input_q, &fb, portMAX_DELAY);
 
     /* Read gray_scale buffer */
     uint8_t* grayscale_img = NULL;
-    xQueueReceive(input_q, grayscale_img, portMAX_DELAY);
+    xQueueReceive(input_q, &grayscale_img, portMAX_DELAY);
 
     /* Allocate downscale buffer pointer*/
-    ESP_LOGE(TAG, "Allocating downscaled image memory");
+    ESP_LOGI(TAG1, "Allocating downscaled image memory");
     uint8_t* downscaled_img = NULL;
     while(downscaled_img == NULL) {
         downscaled_img = malloc(96*96);
@@ -51,7 +52,7 @@ void downscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     size_t height = IMAGE_HEIGHT;
 
     uint32_t pixel_window_size = row_pix * col_pix;
-    ESP_LOGE(TAG, "Performing Downscale");
+    ESP_LOGI(TAG1, "Performing Downscale");
     for(int row = 0; row < 96; row ++) {
         uint32_t downscaled_row_index = 96 * row;
         for(int col = 0; col < 96; col++) {
@@ -75,12 +76,12 @@ void downscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     free(grayscale_img);
 
     /* Pass Camera fb */
-    ESP_LOGE(TAG, "Downscale: Writing camera fb");
-    xQueueSend(output_q, fb, portMAX_DELAY);
+    ESP_LOGI(TAG1, "Downscale: Writing camera fb");
+    xQueueSend(output_q, &fb, portMAX_DELAY);
 
     /* Pass downscale buffer to PD*/
-    ESP_LOGE(TAG, "Downscale: Writing downscaled");
-    xQueueSend(output_q, downscaled_img, portMAX_DELAY);
+    ESP_LOGI(TAG1, "Downscale: Writing downscaled");
+    xQueueSend(output_q, &downscaled_img, portMAX_DELAY);
 
     /* Vtask Delay*/
     vTaskDelay(1);
@@ -89,11 +90,13 @@ void downscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
 /* Main task for downscaling*/
 void grayscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     /* Read camera_fb from input_q*/
-    camera_fb_t* fb = NULL;
-    xQueueReceive(input_q, fb, portMAX_DELAY);
+    uint8_t* fb = NULL;
+
+    ESP_LOGI(TAG2, "Waiting for full image");
+    xQueueReceive(input_q, &fb, portMAX_DELAY);
 
     /* Malloc grayscale buffer - try catch*/
-    ESP_LOGE(TAG, "Allocating grayscale memory");
+    ESP_LOGI(TAG2, "Allocating grayscale memory");
     uint8_t* grayscale_img  = NULL;
     while(grayscale_img == NULL) {
         grayscale_img = malloc(IMAGE_HEIGHT * IMAGE_WIDTH);
@@ -102,8 +105,8 @@ void grayscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     /* Perform gray scale */
     int index = 0;
     for(int i = 0; i < IMAGE_HEIGHT*IMAGE_WIDTH; i++) {
-        uint16_t pixel = (fb->buf[index]);
-        pixel = (pixel << 8) + fb->buf[index+1];
+        uint16_t pixel = (fb[index]);
+        pixel = (pixel << 8) + fb[index+1];
         index +=2;
 
         uint8_t red =   (pixel & 0b1111100000000000) >> 11;
@@ -116,12 +119,12 @@ void grayscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     }
 
     /* Write camera_fb*/
-    ESP_LOGE(TAG, "Grayscale: Writing camera fb");
-    xQueueSend(output_q, fb, portMAX_DELAY);
+    ESP_LOGI(TAG2, "Grayscale: Writing camera fb");
+    xQueueSend(output_q, &fb, portMAX_DELAY);
 
     /* Write gray_scale buffer*/
-    ESP_LOGE(TAG, "Grayscale: Writing grayscaled");
-    xQueueSend(output_q, grayscale_img, portMAX_DELAY);
+    ESP_LOGI(TAG2, "Grayscale: Writing grayscaled");
+    xQueueSend(output_q, &grayscale_img, portMAX_DELAY);
 
     /* VTask Delay */
     vTaskDelay(1);

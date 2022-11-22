@@ -30,13 +30,12 @@
 
 static const char *TAG = "networking";
 static const char *header = "IMAGE_HEADER";
-static const int image_size = 96 * 96;
+static const int image_size = 320 * 240 * 2; //image size in bytes 
 
 
 static void network_task_loop(QueueHandle_t input_q)
 {
-    int8_t* frame_buf;
-    camera_fb_t* fb;
+    uint8_t* frame_buf;
     char rx_buffer[128];
     char addr_str[128];
     int addr_family;
@@ -69,21 +68,7 @@ static void network_task_loop(QueueHandle_t input_q)
         while (1) 
         {
 
-            xQueueReceive(input_q, &fb, portMAX_DELAY);
-            frame_buf = (int8_t*) fb->buf;
-            /*
-            //Send image_header
-            err = send(sock, header, strlen(header), 0);
-            if(err < 0)
-            {
-                ESP_LOGE(TAG, "Error sending image header");
-            }
-            err = send(sock, (void *) (&image_size), sizeof(int), 0);
-            if(err < 0)
-            {
-                ESP_LOGE(TAG, "Error sending image size");
-            }
-            */
+            xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
 
            int bytes_per_send = 512;
            int i;
@@ -101,8 +86,6 @@ static void network_task_loop(QueueHandle_t input_q)
                 ESP_LOGE(TAG, "Error sending image buffer");
            }
 
-            free(frame_buf);
-
             int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
             // Error occurred during receiving
             if (len < 0) {
@@ -116,7 +99,7 @@ static void network_task_loop(QueueHandle_t input_q)
                 ESP_LOGI(TAG, "%s", rx_buffer);
             }
             /* Return the frame buffer */
-            esp_camera_fb_return(fb);
+            free(frame_buf);
             vTaskDelay(2000 / portTICK_PERIOD_MS);
         }
 

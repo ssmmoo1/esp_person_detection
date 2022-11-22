@@ -118,19 +118,25 @@ void pdetect_task_setup() {
 }
 
 #ifndef CLI_ONLY_INFERENCE
-// The name of this function is important for Arduino compatibility.
 void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
-  camera_fb_t* fb = NULL;
-  int8_t* frame_buf;
 
+  uint8_t* og_buf = NULL; //original image
+  uint8_t* proc_buf = NULL; //processed image 
+  ESP_LOGI("Person Detection: ", "Waiting for full image\n");
   /* Get full image from queue */
-  xQueueReceive(input_q, fb, portMAX_DELAY);
+  xQueueReceive(input_q, &og_buf, portMAX_DELAY);
   /* Get downscaled gray image from queue */
-  ESP_LOGE("Person Detection: ", "Waiting for input image\n");
-  xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
+  ESP_LOGI("Person Detection: ", "Waiting for downscaled image\n");
+  xQueueReceive(input_q, &proc_buf, portMAX_DELAY);
 
-  ESP_LOGE("Person Detection: ", "Received an input image\n");
-  memcpy(input->data.int8, frame_buf, 96*96);
+  ESP_LOGI("Person Detection: ", "Received an input image\n");
+
+
+  //Copy data to input tensor and quantize 
+  for(int i = 0; i < (96*96); i++)
+  {
+    input->data.int8[i] = ((uint8_t *) proc_buf)[i] ^ 0x80;
+  }
   
   // Run the model on this input and make sure it succeeds.
   if (kTfLiteOk != interpreter->Invoke()) {
@@ -152,15 +158,19 @@ void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
   RespondToDetection(error_reporter, person_score_f, no_person_score_f);
   
   /* Free downscale buffer */
-  free(frame_buf);
+  free(proc_buf);
 
   /* Send to network queue if needed */
   if(person_score_f > no_person_score_f) {
-    xQueueSend(output_q, (void*) fb, portMAX_DELAY);
+    xQueueSend(output_q, &og_buf, portMAX_DELAY);
   } else {
     /* Return camera frame */
-    esp_camera_fb_return(fb);
+    free(og_buf);
   }
+
+  //xQueueSend(output_q, &fb, portMAX_DELAY);
+
+
   vTaskDelay(1); // to avoid watchdog trigger
 }
 #endif
