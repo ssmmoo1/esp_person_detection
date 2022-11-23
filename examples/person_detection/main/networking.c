@@ -26,8 +26,8 @@
 #include "esp_node_defines.h"
 
 
-#define HOST_IP_ADDR "192.168.0.141"
-#define PORT 3333
+#define HOST_IP_ADDR "24.243.152.111"
+#define PORT 25565
 
 static const char *TAG = "networking";
 static const int image_size = IMAGE_WIDTH * IMAGE_HEIGHT * 2; //image size in bytes 

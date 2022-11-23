@@ -4,9 +4,9 @@
 
 #include "esp_camera.h"
 
-#define R_640x480
+// #define R_320x240
 // #define R_400x296
-// #define R_640x480
+#define R_640x480
 // #define R_800x600
 // #define R_1024x968
 
