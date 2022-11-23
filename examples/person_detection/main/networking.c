@@ -26,7 +26,7 @@
 #include "esp_node_defines.h"
 
 
-#define HOST_IP_ADDR "192.168.114"
+#define HOST_IP_ADDR "192.168.1.114"
 #define PORT 2222
 
 static const char *TAG = "networking";
