@@ -23,14 +23,15 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
+#include "esp_node_defines.h"
 
 
-#define HOST_IP_ADDR "192.168.0.246"
-#define PORT 3333
+#define HOST_IP_ADDR "192.168.114"
+#define PORT 2222
 
 static const char *TAG = "networking";
 static const char *header = "IMAGE_HEADER";
-static const int image_size = 320 * 240 * 2; //image size in bytes 
+static const int image_size = IMAGE_WIDTH * IMAGE_HEIGHT * 2; //image size in bytes 
 
 
 static void network_task_loop(QueueHandle_t input_q)

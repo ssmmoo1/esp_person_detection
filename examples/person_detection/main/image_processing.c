@@ -9,10 +9,7 @@
 
 #include "esp_camera.h"
 #include "image_processing.h"
-
-#define IMAGE_WIDTH 320
-#define IMAGE_HEIGHT 240
-
+#include "esp_node_defines.h"
 
 static const char *TAG1 = "downscaling";
 static const char *TAG2 = "grayscaling";

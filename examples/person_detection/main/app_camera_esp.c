@@ -14,6 +14,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "app_camera_esp.h"
+#include "esp_node_defines.h"
 
 static const char *TAG = "app_camera";
 
@@ -54,7 +55,7 @@ int app_camera_init() {
   config.pin_reset = CAMERA_PIN_RESET;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_RGB565;
-  config.frame_size = FRAMESIZE_QVGA;
+  config.frame_size = CAMERA_INPUT;
   config.jpeg_quality = 10;
   config.fb_count = 1;
   config.grab_mode      = CAMERA_GRAB_WHEN_EMPTY;

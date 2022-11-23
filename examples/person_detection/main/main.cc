@@ -26,6 +26,7 @@ limitations under the License.
 #include "app_camera_esp.h"
 #include "esp_camera.h"
 #include "image_processing.h"
+#include "esp_node_defines.h"
 
 #include "esp_main.h"
 
