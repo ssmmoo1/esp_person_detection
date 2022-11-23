@@ -66,11 +66,11 @@ void camera_task(void* args)
       uint8_t* frame_buf = NULL;
       while(frame_buf == NULL)
       {
-        frame_buf = (uint8_t *) malloc(320 * 240 * 2);
+        frame_buf = (uint8_t *) malloc(IMAGE_WIDTH * IMAGE_HEIGHT * 2);
       }
       ESP_LOGI("Camera Task: ", "Copied image to new buffer\n");
 
-      memcpy(frame_buf, fb->buf, 320 * 240 * 2);
+      memcpy(frame_buf, fb->buf, IMAGE_WIDTH * IMAGE_HEIGHT * 2);
       esp_camera_fb_return(fb);
 
       ESP_LOGI("Camera Task: ", "Returned camera fb\n");
@@ -78,7 +78,7 @@ void camera_task(void* args)
       ESP_LOGI("Camera Task: ", "Sending image to person detection");
       xQueueSend(grayscale_q, &frame_buf, portMAX_DELAY);
       ESP_LOGI("Camera Task: ", "Send image to person detection");
-      vTaskDelay(5000 / portTICK_PERIOD_MS);
+      vTaskDelay(500 / portTICK_PERIOD_MS);
       
     }
 

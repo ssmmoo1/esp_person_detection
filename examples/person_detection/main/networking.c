@@ -26,11 +26,10 @@
 #include "esp_node_defines.h"
 
 
-#define HOST_IP_ADDR "192.168.114"
-#define PORT 2222
+#define HOST_IP_ADDR "192.168.0.141"
+#define PORT 3333
 
 static const char *TAG = "networking";
-static const char *header = "IMAGE_HEADER";
 static const int image_size = IMAGE_WIDTH * IMAGE_HEIGHT * 2; //image size in bytes 
 
 
@@ -71,7 +70,7 @@ static void network_task_loop(QueueHandle_t input_q)
 
             xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
 
-           int bytes_per_send = 512;
+           int bytes_per_send = 4096;
            int i;
            for(i = 0; i < image_size; i+=bytes_per_send)
            {
@@ -87,18 +86,6 @@ static void network_task_loop(QueueHandle_t input_q)
                 ESP_LOGE(TAG, "Error sending image buffer");
            }
 
-            int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
-            // Error occurred during receiving
-            if (len < 0) {
-                ESP_LOGE(TAG, "recv failed: errno %d", errno);
-                break;
-            }
-            // Data received
-            else {
-                rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-                ESP_LOGI(TAG, "Received %d bytes from %s:", len, addr_str);
-                ESP_LOGI(TAG, "%s", rx_buffer);
-            }
             /* Return the frame buffer */
             free(frame_buf);
             vTaskDelay(2000 / portTICK_PERIOD_MS);
