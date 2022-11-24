@@ -234,6 +234,6 @@ extern "C" void app_main() {
   xTaskCreate(grayscale_task, "grayscale_task", 3* 1024, NULL, 5, NULL);
   xTaskCreate(downscale_task, "downscale_task", 3* 1024, NULL, 5, NULL);
   xTaskCreate(pdetect_task, "pdetect_task", 3 * 1024, NULL, 5, NULL);
-  xTaskCreate(network_task, "network_task", 3* 1024, NULL, 6, NULL);
+  xTaskCreate(network_task, "network_task", 3* 1024, NULL, 5, NULL);
   vTaskDelete(NULL);
 }
