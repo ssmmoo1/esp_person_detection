@@ -26,15 +26,22 @@
 #include "esp_node_defines.h"
 
 
-#define HOST_IP_ADDR "24.243.152.111"
-#define PORT 25565
+//#define HOST_IP_ADDR "24.243.152.111"
+//#define PORT 25565
+
+/* Malav's Laptop */
+#define HOST_IP_ADDR "192.168.1.135"
+#define PORT 2223
 
 static const char *TAG = "networking";
 static const int image_size = IMAGE_WIDTH * IMAGE_HEIGHT * 2; //image size in bytes 
 
 
-static void network_task_loop(QueueHandle_t input_q)
-{
+static void network_task_loop(QueueHandle_t input_q) {
+#ifdef ENABLE_TIMING
+  struct timeval tv_start;
+  struct timeval tv_stop;
+#endif
     uint8_t* frame_buf;
     char rx_buffer[128];
     char addr_str[128];
@@ -65,30 +72,36 @@ static void network_task_loop(QueueHandle_t input_q)
         }
         ESP_LOGI(TAG, "Successfully connected");
 
-        while (1) 
-        {
+        while (1) {
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_start, NULL);
+#endif
+        xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
 
-            xQueueReceive(input_q, &frame_buf, portMAX_DELAY);
-
-           int bytes_per_send = 4096;
-           int i;
-           for(i = 0; i < image_size; i+=bytes_per_send)
-           {
+        int bytes_per_send = 4096;
+        int i;
+        for(i = 0; i < image_size; i+=bytes_per_send) {
             err = send(sock, frame_buf+i, bytes_per_send, 0);
-            if(err < 0)
-            {
+            if(err < 0) {
                 ESP_LOGE(TAG, "Error sending image buffer");
             }
-           }
-           err = send(sock, frame_buf+i-bytes_per_send, image_size - i, 0);
-           if(err < 0)
-           {
-                ESP_LOGE(TAG, "Error sending image buffer");
-           }
+        }
+        err = send(sock, frame_buf+i-bytes_per_send, image_size - i, 0);
+        if(err < 0) {
+            ESP_LOGE(TAG, "Error sending image buffer");
+        }
 
-            /* Return the frame buffer */
-            free(frame_buf);
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
+        /* Return the frame buffer */
+        free(frame_buf);
+
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_stop, NULL);
+    float time_sec = tv_stop.tv_sec - tv_start.tv_sec + 1e-6f * (tv_stop.tv_usec - tv_start.tv_usec);
+    printf("Networking Loop Time Taken: %f sec\n", time_sec);
+#endif
+        vTaskDelay(1);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        //vTaskDelay(0);
         }
 
         if (sock != -1) {

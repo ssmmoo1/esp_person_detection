@@ -170,8 +170,6 @@ void pdetect_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
 
   //xQueueSend(output_q, &fb, portMAX_DELAY);
 
-
-  vTaskDelay(1); // to avoid watchdog trigger
 }
 #endif
 

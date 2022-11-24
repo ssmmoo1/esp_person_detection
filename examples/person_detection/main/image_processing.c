@@ -80,8 +80,6 @@ void downscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     ESP_LOGI(TAG1, "Downscale: Writing downscaled");
     xQueueSend(output_q, &downscaled_img, portMAX_DELAY);
 
-    /* Vtask Delay*/
-    vTaskDelay(1);
 }
 
 /* Main task for downscaling*/
@@ -123,6 +121,4 @@ void grayscale_task_loop(QueueHandle_t input_q, QueueHandle_t output_q) {
     ESP_LOGI(TAG2, "Grayscale: Writing grayscaled");
     xQueueSend(output_q, &grayscale_img, portMAX_DELAY);
 
-    /* VTask Delay */
-    vTaskDelay(1);
 }

@@ -30,6 +30,13 @@ limitations under the License.
 
 #include "esp_main.h"
 
+#ifdef ENABLE_TIMING
+  struct timeval g_tv_start[20];
+  struct timeval g_tv_stop[20];
+  uint8_t g_time_start_idx = 0;
+  uint8_t g_time_stop_idx = 0;
+#endif
+
 #if CLI_ONLY_INFERENCE
 #include "esp_cli.h"
 #endif
@@ -44,18 +51,25 @@ static QueueHandle_t network_q; //frame buffer pointer x1
 //Take images with the camera
 //No input queue
 //Writes 1 token to output queue, pointer to image taken by camera 
-void camera_task(void* args)
-{
+void camera_task(void* args) {
+#ifdef ENABLE_TIMING
+  struct timeval tv_start;
+  struct timeval tv_stop;
+#endif
+
     //Setup camera 
     int ret = app_camera_init();
-    if(ret != 0)
-    {
+    if(ret != 0) {
       ESP_LOGE("Camera Task: ", "Camera init failed \n");
     }
 
     //Loop taking images 
-    while(true)
-    {
+    while(true) {
+#ifdef ENABLE_TIMING
+      gettimeofday(&tv_start, NULL);
+      gettimeofday(&g_tv_start[g_time_start_idx], NULL);
+      g_time_start_idx++;
+#endif
       //Get image from camera
       camera_fb_t* fb = NULL;
       while(fb == NULL) {
@@ -65,9 +79,9 @@ void camera_task(void* args)
 
       ESP_LOGI("Camera Task: ", "Trying to malloc buffer\n");
       uint8_t* frame_buf = NULL;
-      while(frame_buf == NULL)
-      {
+      while(frame_buf == NULL) {
         frame_buf = (uint8_t *) malloc(IMAGE_HEIGHT * IMAGE_WIDTH * 2);
+        vTaskDelay(0);
       }
 
       memcpy(frame_buf, fb->buf, IMAGE_HEIGHT * IMAGE_WIDTH * 2);
@@ -81,20 +95,44 @@ void camera_task(void* args)
       ESP_LOGI("Camera Task: ", "Sending image to person detection");
       xQueueSend(grayscale_q, &frame_buf, portMAX_DELAY);
       ESP_LOGI("Camera Task: ", "Send image to person detection");
-      vTaskDelay(500 / portTICK_PERIOD_MS);
-      
+#ifdef ENABLE_TIMING
+      gettimeofday(&tv_stop, NULL);
+      float time_sec = tv_stop.tv_sec - tv_start.tv_sec + 1e-6f * (tv_stop.tv_usec - tv_start.tv_usec);
+      printf("Camera Loop Time Taken: %f sec\n", time_sec);
+#endif
+      vTaskDelay(200 / portTICK_PERIOD_MS);
+      //vTaskDelay(1);
+
     }
 
 }
 
 //Converts image to grayscale 
 /* Outputs: 2 tokens to downscale queue: original and grayscal image */
-void grayscale_task(void* args)
-{
+void grayscale_task(void* args) {
   grayscale_task_setup();
-  while(true)
-  {
+
+#ifdef ENABLE_TIMING
+  struct timeval tv_start;
+  struct timeval tv_stop;
+#endif
+
+  while(true) {
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_start, NULL);
+#endif
+
     grayscale_task_loop(grayscale_q, downscale_q);
+    
+    /* Vtask Delay*/
+    vTaskDelay(1);
+    //vTaskDelay(0);
+
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_stop, NULL);
+    float time_sec = tv_stop.tv_sec - tv_start.tv_sec + 1e-6f * (tv_stop.tv_usec - tv_start.tv_usec);
+    printf("Grayscale Loop Time Taken: %f sec\n", time_sec);
+#endif
   }
 
 }
@@ -102,12 +140,30 @@ void grayscale_task(void* args)
 //Downscale images to 96x96
 //Reads 2 token from input queue: pointer to original image and grayscale image 
 //Writes 2 token to output queue: pointer to original image and pointer to downscaled image 
-void downscale_task(void* args)
-{
+void downscale_task(void* args) {
+#ifdef ENABLE_TIMING
+  struct timeval tv_start;
+  struct timeval tv_stop;
+#endif
+
     downscale_task_setup();
-    while(true)
-    {
-      downscale_task_loop(downscale_q, pdetect_q);
+
+    while(true) {
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_start, NULL);
+#endif
+
+    downscale_task_loop(downscale_q, pdetect_q);
+      
+    /* VTask Delay */
+    vTaskDelay(1);
+    //vTaskDelay(0);
+
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_stop, NULL);
+    float time_sec = tv_stop.tv_sec - tv_start.tv_sec + 1e-6f * (tv_stop.tv_usec - tv_start.tv_usec);
+    printf("Downscale Loop Time Taken: %f sec\n", time_sec);
+#endif
     }
 }
 
@@ -117,12 +173,36 @@ void downscale_task(void* args)
 //Writes 1 token to output queue, pointer to original image if a person was detected
 //Reads in 96x96 grayscale images and puts full resolution color image pointer into 
 void pdetect_task(void* args) {
+#ifdef ENABLE_TIMING
+  struct timeval tv_start;
+  struct timeval tv_stop;
+#endif
   pdetect_task_setup();
 
-  //TODO: Free downscale buffer pointer
-  //TODO: Return camera frame back to camera 
   while (true) {
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_start, NULL);
+#endif
+
     pdetect_task_loop(pdetect_q, network_q);
+
+    /* VTask Delay */
+    vTaskDelay(1);
+    //vTaskDelay(0);
+  
+#ifdef ENABLE_TIMING
+    gettimeofday(&tv_stop, NULL);
+    gettimeofday(&g_tv_stop[g_time_stop_idx], NULL);
+    float time_sec = tv_stop.tv_sec - tv_start.tv_sec + 1e-6f * (tv_stop.tv_usec - tv_start.tv_usec);
+    printf("Person Detection Loop Time Taken: %f sec\n", time_sec);
+    float time_sec2 = tv_stop.tv_sec - g_tv_start[g_time_stop_idx].tv_sec + 1e-6f * (tv_stop.tv_usec - g_tv_start[g_time_stop_idx].tv_usec);
+    printf("Latency: %f sec\n", time_sec2);
+    if(g_time_stop_idx >=1) {
+      float throughput = g_tv_stop[g_time_stop_idx].tv_sec - g_tv_stop[g_time_stop_idx - 1].tv_sec + 1e-6f * (g_tv_stop[g_time_stop_idx].tv_usec - g_tv_start[g_time_stop_idx -1].tv_usec);
+      printf("throughput: %f sec\n", throughput);
+    }
+    g_time_stop_idx++;
+#endif
   }
 }
 

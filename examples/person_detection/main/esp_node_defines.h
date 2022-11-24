@@ -4,6 +4,8 @@
 
 #include "esp_camera.h"
 
+#define ENABLE_TIMING
+
 // #define R_320x240
 // #define R_400x296
 #define R_640x480
